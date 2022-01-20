@@ -5,10 +5,8 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import com.flowbuslib.observeEvent
+import com.flowbuslib.*
 import kotlinx.coroutines.Dispatchers
-import com.flowbuslib.FlowBusEvent
-import com.flowbuslib.postEventProcess
 
 
 class MainActivity : AppCompatActivity() {
@@ -20,23 +18,21 @@ class MainActivity : AppCompatActivity() {
 
 
         findViewById<Button>(R.id.btn).setOnClickListener {
-            val flowBusEvent = FlowBusEvent(404,"MainActivity msg")
-            postEventProcess(flowBusEvent)
+            //进程内发送消息
+            val changeUIEvent = ChangeUIEvent("MainActivity")
+            postEvent(changeUIEvent)
+
+            //夸进程发消息
+//            postEventProcessAIDL(changeUIEvent)
         }
 
         findViewById<Button>(R.id.sec).setOnClickListener {
             startActivity(Intent(this,SecondActivity::class.java))
         }
 
-        observeEvent<FlowBusEvent<String>>(this, Dispatchers.Main){
-            Log.e("main process:","${it.code}-${it.msg}")
-        }
-
-
         observeEvent<ChangeUIEvent>(this, Dispatchers.Main){
             Log.e("ChangeUIEvent:","${it.msg}")
         }
-
 
 
         supportFragmentManager.beginTransaction()

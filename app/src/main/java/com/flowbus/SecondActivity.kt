@@ -12,12 +12,10 @@ class SecondActivity :AppCompatActivity() {
         setContentView(R.layout.activity_second)
 
         findViewById<Button>(R.id.btn).setOnClickListener {
-            val flowBusEvent = FlowBusEvent(200,"SecondActivity msg")
-            postEventProcess(flowBusEvent)
+            //换一个进程   发消息
+            val changeUIEvent = ChangeUIEvent("SecondActivity msg")
+            postEventProcessAIDL(changeUIEvent)
         }
-
-
-
     }
 
 }

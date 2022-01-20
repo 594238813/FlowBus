@@ -1,3 +1,5 @@
 package com.flowbus
 
-open class ChangeUIEvent(val msg:String)
+import java.io.Serializable
+
+open class ChangeUIEvent(var msg:String) :Serializable

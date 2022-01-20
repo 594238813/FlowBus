@@ -2,4 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.flowbuslib">
 
+
+    <application>
+
+        <service
+            android:name=".service.FlowBusService"
+            />
+    </application>
+
 </manifest>

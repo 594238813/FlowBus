@@ -12,9 +12,10 @@
         tools:context=".MainActivity">
 
         <TextView
+            android:layout_marginTop="50dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="这里是fragment"/>
+            android:text="下面是fragment"/>
 
         <Button
             android:id="@+id/btn_fragment"

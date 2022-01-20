@@ -1,35 +1,32 @@
 package com.flowbuslib
 
-import android.content.Context
-import android.content.Intent
+import android.os.Process
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.*
-import com.flowbuslib.FlowBusInit.KEY
-import com.flowbuslib.FlowBusInit.RECEIVER_ACTION
-import kotlinx.coroutines.CoroutineDispatcher
+import com.flowbuslib.bean.FlowBusEventAIDL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.Serializable
 import kotlin.coroutines.CoroutineContext
 
 class FlowBus:ViewModel()
 
 
-val eventFlows = mutableMapOf<String, MutableSharedFlow<Any>>()
+val eventFlows = HashMap<String, MutableSharedFlow<Any>>()
 
 
-inline fun <reified T> getFlow(replay:Int=0,extraBufferCapacity:Int=0): MutableSharedFlow<Any> {
+inline fun <reified T> getFlow(replay:Int=0,byName:String?=null): MutableSharedFlow<Any> {
 
-    var temp : MutableSharedFlow<Any>? = eventFlows[T::class.java.name]
+    val reanName = byName?:T::class.java.name
 
+    var temp : MutableSharedFlow<Any>? = eventFlows[reanName]
     if(temp==null){
-        temp = MutableSharedFlow(replay,extraBufferCapacity, BufferOverflow.SUSPEND)
-        eventFlows[T::class.java.name] = temp
+        temp = MutableSharedFlow(replay,Int.MAX_VALUE, BufferOverflow.SUSPEND)
+        eventFlows[reanName] = temp
     }
 
     return temp
@@ -38,13 +35,11 @@ inline fun <reified T> getFlow(replay:Int=0,extraBufferCapacity:Int=0): MutableS
 //订阅
 inline fun <reified T> observeEvent(context: AppCompatActivity,
                                     cDispatcher: CoroutineContext = Dispatchers.IO,
-                                    replay:Int=0,
-                                    extraBufferCapacity:Int=0 ,
+                                    replay:Int = 1,     // 粘多少
                                     noinline block: (T) ->Unit){
 
-    val subscribeFlow = getFlow<T>(replay,extraBufferCapacity)
-
-    context.lifecycleScope.launch {
+    val subscribeFlow = getFlow<T>(replay)
+    context.lifecycleScope.launchWhenStarted {
         subscribeFlow
             .flowWithLifecycle(context.lifecycle)
             .flowOn(cDispatcher)
@@ -52,29 +47,28 @@ inline fun <reified T> observeEvent(context: AppCompatActivity,
                 block(it as T)
             }
     }
-
 }
 
 //发送消息
-inline fun <reified T>  postEvent(event:T){
+inline fun <reified T> postEvent(event: T, byName:String?=null){
     require(event != null) { "事件不能为空" }
 
     val flowbus =  FlowBusInit.getViewModelProvider()[FlowBus::class.java]
 
     flowbus.viewModelScope.launch {
-        getFlow<T>().emit(event)
+        getFlow<T>(byName = byName).emit(event)
     }
 }
 
-inline fun <reified T>  postEventProcess(event:T){
+//发射到 服务端
+inline fun <reified T>  postEventProcessAIDL(event:T){
     require(event != null) { "事件不能为空" }
     require(event is Serializable) { "bean 要继承 Serializable" }
 
-    val flowbus = FlowBusInit.getViewModelProvider()[FlowBus::class.java]
+    val flowBusEventAIDL =  FlowBusEventAIDL()
+    flowBusEventAIDL.data = event
+    flowBusEventAIDL.code = 200
+    flowBusEventAIDL.msg = "aaa"
 
-    flowbus.viewModelScope.launch {
-        val it = Intent(RECEIVER_ACTION)
-        it.putExtra(KEY, event as Serializable)
-        FlowBusInit.appContext.sendBroadcast(it)
-    }
+    FlowBusInit.mRemoteService?.postToService(flowBusEventAIDL)
 }
